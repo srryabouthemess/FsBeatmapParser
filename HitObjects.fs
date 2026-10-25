@@ -140,3 +140,28 @@ let hitObjectToString obj =
     | Comment comment -> comment
 
 let parseHitObjectSection : string list -> HitObject list = parseSectionUsing tryParseHitObject
+
+// playfield is 512x384 osu!pixels
+let mirrorX horizontal x = if horizontal then 512 - x else x
+let mirrorY vertical y   = if vertical   then 384 - y else y
+
+// curve is the first field of the remainder: "B|x:y|x:y"
+let mirrorSliderRemainder horizontal vertical (remainder:string) =
+    let fields = remainder.Split([|','|], 2)
+    let mirrorPoint (point:string) =
+        match point.Split(':') with
+        | [|Int x; Int y|] -> sprintf "%d:%d" (mirrorX horizontal x) (mirrorY vertical y)
+        | _ -> point
+    let curve =
+        match fields.[0].Split('|') |> Array.toList with
+        | curveType::points -> String.Join("|", curveType :: List.map mirrorPoint points)
+        | [] -> fields.[0]
+    String.Join(",", Array.append [|curve|] fields.[1..])
+
+// spinners and mania holds are left alone
+let mirrorHitObject horizontal vertical obj =
+    match obj with
+    | HitCircle c -> HitCircle { c with x = mirrorX horizontal c.x; y = mirrorY vertical c.y }
+    | Slider s    -> Slider    { s with x = mirrorX horizontal s.x; y = mirrorY vertical s.y;
+                                        remainder = mirrorSliderRemainder horizontal vertical s.remainder }
+    | other       -> other

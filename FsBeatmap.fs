@@ -160,6 +160,17 @@ type Beatmap(file, repr, cl) =
 
         this.changelist <- {this.changelist with hitObjects = newHitObjects}
 
+    member public this.Mirror(horizontal:bool, vertical:bool) =
+        let objects =
+            if (this.changelist.hitObjects |> removeHitObjectComments) = [] then
+                this.originalFileRepresentation.hitObjects
+            else
+                this.changelist.hitObjects
+
+        let newHitObjects = List.map (mirrorHitObject horizontal vertical) objects
+
+        this.changelist <- {this.changelist with hitObjects = newHitObjects}
+
     member public this.SetRate (rate:decimal) =
         let originalPreviewTime = match this.originalFileRepresentation.general |> List.tryFind isPreviewTime with
                                   | Some previewTime -> getPreviewTime previewTime
@@ -186,7 +197,7 @@ type Beatmap(file, repr, cl) =
         let newHitObjects = this.originalFileRepresentation.hitObjects
                             |> List.map (function
                                          | HitCircle c  -> HitCircle { c with time = (divide c.time rate) }
-                                         | Slider s     -> HitCircle { s with time = (divide s.time rate) }
+                                         | Slider s     -> Slider    { s with time = (divide s.time rate) }
                                          | Spinner spin -> Spinner   { spin with time    = (divide spin.time rate);
                                                                                  endTime = (divide spin.endTime rate)}
                                          | Hold h       -> Hold      { h with time    = (divide h.time rate);
